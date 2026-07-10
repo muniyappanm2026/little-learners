@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Trace the Letter!</title>
+<style>
+  :root{
+    --cream:#FFF7E8;
+    --sun:#FFC33D;
+    --sky:#4FB4E8;
+    --grass:#66C97F;
+    --coral:#FF7A6E;
+    --grape:#B27FE0;
+    --ink:#3A3230;
+    --card:#FFFFFF;
+    --shadow: 0 10px 0 rgba(58,50,48,0.12);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent; user-select:none;}
+  html,body{
+    margin:0; height:100%; overflow:hidden;
+    background: radial-gradient(circle at 15% 10%, #FFFDF6 0%, var(--cream) 55%, #FFEFC9 100%);
+    font-family: "Segoe UI Rounded","SF Pro Rounded","Trebuchet MS",Verdana,sans-serif;
+    color:var(--ink);
+    touch-action: none;
+  }
+  .screen{
+    position:relative;
+    width:100%; height:100%;
+    display:flex; flex-direction:column;
+    align-items:center;
+    padding: clamp(10px,2vh,26px) clamp(12px,3vw,40px);
+  }
+
+  /* floating background bits */
+  .bg-blob{position:absolute; border-radius:50%; opacity:.5; filter:blur(1px);}
+
+  header{
+    width:100%; max-width:980px;
+    display:flex; align-items:center; gap: 14px;
+  }
+  .dots{ margin-left:auto; }
+  .title-wrap{display:flex; align-items:center; gap:14px;}
+  .title-wrap h1{
+    font-size: clamp(22px,3.4vw,34px);
+    margin:0; letter-spacing:.5px;
+  }
+  .title-wrap .sub{font-size:clamp(13px,1.6vw,16px); color:#8a7d78; margin-top:2px;}
+
+  .dots{display:flex; gap:10px;}
+  .dot{
+    width:16px; height:16px; border-radius:50%;
+    background:#F0E4D4; border:2px solid #E7D6BE;
+    transition: all .25s ease;
+  }
+  .dot.active{ background:var(--sun); border-color:#E3A100; transform:scale(1.25);}
+  .dot.done{ background:var(--grass); border-color:#39954F;}
+
+  /* mascot */
+  .mascot{ width: clamp(56px,7vw,84px); height:auto; animation: bob 3s ease-in-out infinite; flex-shrink:0;}
+  @keyframes bob{ 0%,100%{transform:translateY(0) rotate(-2deg);} 50%{transform:translateY(-8px) rotate(2deg);} }
+  .mascot.cheer{ animation: cheer .6s ease-in-out 3; }
+  @keyframes cheer{ 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-18px) scale(1.12) rotate(8deg);} }
+
+  main{
+    flex:1; width:100%; max-width:980px;
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+    min-height:0;
+  }
+
+  .card{
+    background:var(--card);
+    border-radius:32px;
+    box-shadow: var(--shadow), 0 2px 18px rgba(58,50,48,0.08);
+    border:6px solid #FFE3A6;
+    width:min(78vh, 92%);
+    aspect-ratio: 1/1;
+    max-height: 100%;
+    position:relative;
+    overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+    touch-action:none;
+  }
+  .guide-svg, canvas.draw-layer{
+    position:absolute; inset:0; width:100%; height:100%;
+  }
+  canvas.draw-layer{ touch-action:none; cursor: crosshair; }
+
+  .fruit-hint{
+    position:absolute; top:14px; right:16px;
+    font-size: clamp(28px,4vw,44px);
+    display:flex; align-items:center; gap:6px;
+    background:#FFF3D6; border-radius:20px; padding:6px 14px 6px 10px;
+    box-shadow: 0 4px 0 rgba(58,50,48,0.08);
+  }
+  .fruit-hint span.lbl{ font-size:14px; color:#9c8a75; font-weight:600;}
+
+  /* side controls */
+  .controls-col{
+    position:absolute; left:-4px; top:50%; transform:translate(-102%,-50%);
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .swatch-col{
+    position:absolute; right:-4px; top:50%; transform:translate(102%,-50%);
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .swatch{
+    width:44px; height:44px; border-radius:50%;
+    border:4px solid #fff; box-shadow:0 3px 0 rgba(58,50,48,0.15);
+    cursor:pointer;
+  }
+  .swatch.selected{ outline:3px solid var(--ink); outline-offset:2px; transform:scale(1.1);}
+
+  footer{
+    width:100%; max-width:980px;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:14px; padding-top: clamp(8px,1.6vh,18px); flex-wrap:wrap;
+  }
+  .btn{
+    font-family:inherit; font-weight:800; font-size: clamp(15px,1.9vw,19px);
+    border:none; border-radius:20px; padding: 14px 22px;
+    cursor:pointer; color:#fff;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.15);
+    display:flex; align-items:center; gap:8px;
+    transition: transform .08s ease;
+  }
+  .btn:active{ transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+  .btn.clear{ background:#B9AFA6;}
+  .btn.hear{ background:var(--sky);}
+  .btn.done{ background:var(--grass); font-size: clamp(17px,2.2vw,22px); padding: 16px 30px;}
+  .btn.next{ background:var(--coral); }
+  .btn[disabled]{ opacity:.4; pointer-events:none; }
+
+  .home-btn{
+    width:46px; height:46px; border-radius:50%;
+    background:#fff; border:3px solid #FFE3A6;
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; text-decoration:none; flex-shrink:0;
+    box-shadow: 0 4px 0 rgba(58,50,48,0.12);
+  }
+  .home-btn:active{ transform: translateY(3px); box-shadow:none; }
+
+  .toast{
+    position:fixed; left:50%; bottom: 26px; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color:#fff; font-weight:700;
+    padding: 12px 22px; border-radius:18px; font-size: clamp(14px,1.8vw,18px);
+    opacity:0; pointer-events:none; transition: all .25s ease;
+    z-index:80; display:flex; align-items:center; gap:8px; max-width:88vw; text-align:center;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+
+  .guide-svg text.pulse{ animation: guidePulse .5s ease 2; }
+  @keyframes guidePulse{ 0%,100%{ stroke:#F3E4C8; } 50%{ stroke: var(--sun); } }
+
+  /* celebration overlay */
+  .celebrate{
+    position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+    background: rgba(255,247,232,0.88); z-index:50; flex-direction:column; gap:18px;
+    text-align:center;
+  }
+  .celebrate.show{display:flex;}
+  .celebrate h2{ font-size: clamp(30px,6vw,56px); margin:0; color:var(--coral);}
+  .star-row{ font-size: clamp(40px,7vw,70px); }
+  .star-row span{ display:inline-block; animation: pop .5s ease backwards;}
+  .star-row span:nth-child(1){animation-delay:.05s;}
+  .star-row span:nth-child(2){animation-delay:.2s;}
+  .star-row span:nth-child(3){animation-delay:.35s;}
+  @keyframes pop{ 0%{transform:scale(0) rotate(-40deg); opacity:0;} 70%{transform:scale(1.3) rotate(8deg);} 100%{transform:scale(1) rotate(0); opacity:1;} }
+
+  .confetti{ position:fixed; top:-20px; border-radius:3px; z-index:40; }
+
+  @media (max-width: 720px){
+    .controls-col, .swatch-col{ position:static; transform:none; flex-direction:row; justify-content:center; margin-top:10px;}
+    main{ flex-direction:column; gap:10px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="screen">
+  <div class="toast" id="toast"></div>
+
+  <header>
+    <a class="home-btn" href="index.html" title="Back to lessons">🏠</a>
+    <div class="title-wrap">
+      <svg class="mascot" id="mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="50" cy="60" rx="34" ry="26" fill="#FFFFFF" stroke="#E7D6BE" stroke-width="3"/>
+        <circle cx="30" cy="48" r="18" fill="#FFFFFF" stroke="#E7D6BE" stroke-width="3"/>
+        <circle cx="70" cy="48" r="18" fill="#FFFFFF" stroke="#E7D6BE" stroke-width="3"/>
+        <circle cx="50" cy="38" r="22" fill="#FFFFFF" stroke="#E7D6BE" stroke-width="3"/>
+        <circle cx="41" cy="38" r="4.2" fill="#3A3230"/>
+        <circle cx="60" cy="38" r="4.2" fill="#3A3230"/>
+        <path d="M42 48 Q50 55 58 48" stroke="#3A3230" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <circle cx="33" cy="45" r="4" fill="#FFB4A8" opacity=".7"/>
+        <circle cx="68" cy="45" r="4" fill="#FFB4A8" opacity=".7"/>
+      </svg>
+      <div>
+        <h1>Trace the Letter!</h1>
+        <div class="sub">Use your stylus to trace the dotted letter</div>
+      </div>
+    </div>
+    <div class="dots" id="dots"></div>
+  </header>
+
+  <main>
+    <div class="controls-col">
+      <button class="btn clear" id="clearBtn">🧹 Clear</button>
+      <button class="btn hear" id="hearBtn">🔊 Hear it</button>
+    </div>
+
+    <div class="card" id="card">
+      <div class="fruit-hint" id="fruitHint"><span id="fruitEmoji">🍎</span><span class="lbl" id="fruitWord">apple</span></div>
+      <svg class="guide-svg" id="guideSvg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"></svg>
+      <canvas class="draw-layer" id="drawCanvas"></canvas>
+    </div>
+
+    <div class="swatch-col" id="swatches"></div>
+  </main>
+
+  <footer>
+    <button class="btn next" id="prevBtn" style="background:#D9CDBF;">⬅ Back</button>
+    <button class="btn done" id="doneBtn">✅ I'm Done!</button>
+    <button class="btn next" id="nextBtn">Next ➡</button>
+  </footer>
+</div>
+
+<div class="celebrate" id="celebrate">
+  <svg class="mascot cheer" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="120">
+    <ellipse cx="50" cy="60" rx="34" ry="26" fill="#FFFFFF" stroke="#E7D6BE" stroke-width="3"/>
+    <circle cx="30" cy="48" r="18" fill="#FFFFFF" stroke="#E7D6BE" stroke-width="3"/>
+    <circle cx="70" cy="48" r="18" fill="#FFFFFF" stroke="#E7D6BE" stroke-width="3"/>
+    <circle cx="50" cy="38" r="22" fill="#FFFFFF" stroke="#E7D6BE" stroke-width="3"/>
+    <circle cx="41" cy="38" r="4.2" fill="#3A3230"/>
+    <circle cx="60" cy="38" r="4.2" fill="#3A3230"/>
+    <path d="M40 46 Q50 60 60 46" stroke="#3A3230" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </svg>
+  <h2 id="celebrateText">Great Job!</h2>
+  <div class="star-row"><span>⭐</span><span>🌟</span><span>⭐</span></div>
+</div>
+
+<script>
+(function(){
+  const letters = [
+    {ch:'A', emoji:'🍎', word:'apple'},
+    {ch:'B', emoji:'🍌', word:'banana'},
+    {ch:'C', emoji:'🍰', word:'cake'}
+  ];
+  const colors = ['#FF7A6E','#4FB4E8','#66C97F','#FFC33D','#B27FE0'];
+  let idx = 0;
+  let currentColor = colors[0];
+  let drawing = false;
+  let hasDrawn = false;
+
+  const dotsEl = document.getElementById('dots');
+  const guideSvg = document.getElementById('guideSvg');
+  const canvas = document.getElementById('drawCanvas');
+  const ctx = canvas.getContext('2d');
+  const card = document.getElementById('card');
+  const swatchesEl = document.getElementById('swatches');
+  const fruitEmoji = document.getElementById('fruitEmoji');
+  const fruitWord = document.getElementById('fruitWord');
+  const doneBtn = document.getElementById('doneBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const hearBtn = document.getElementById('hearBtn');
+  const celebrate = document.getElementById('celebrate');
+  const celebrateText = document.getElementById('celebrateText');
+  const mascot = document.getElementById('mascot');
+  const toast = document.getElementById('toast');
+
+  let toastTimer;
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=> toast.classList.remove('show'), 2200);
+  }
+
+  function nudge(msg){
+    showToast(msg);
+    speak(msg);
+    mascot.style.animation = 'none';
+    void mascot.offsetWidth;
+    mascot.style.animation = 'cheer .5s ease-in-out 2';
+    setTimeout(()=>{ mascot.style.animation = ''; }, 1100);
+    const guideText = guideSvg.querySelector('text');
+    if(guideText){
+      guideText.classList.remove('pulse');
+      void guideText.offsetWidth;
+      guideText.classList.add('pulse');
+    }
+  }
+
+  // Checks how much of the dotted letter the student actually traced over.
+  // Returns a value from 0 (nothing traced) to 1 (fully traced).
+  function getTraceCoverage(){
+    const w = canvas.width, h = canvas.height;
+    if(!w || !h) return 0;
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = w; maskCanvas.height = h;
+    const mctx = maskCanvas.getContext('2d');
+    mctx.save();
+    mctx.scale(w/400, h/400);
+    mctx.textAlign = 'center';
+    mctx.textBaseline = 'alphabetic';
+    mctx.font = '900 320px "Segoe UI Rounded","SF Pro Rounded","Trebuchet MS",Verdana,sans-serif';
+    mctx.fillStyle = '#000';
+    mctx.fillText(letters[idx].ch, 200, 290);
+    mctx.restore();
+
+    const maskData = mctx.getImageData(0,0,w,h).data;
+    const drawData = ctx.getImageData(0,0,w,h).data;
+
+    let maskCount = 0, hitCount = 0;
+    const step = 4;
+    for(let y=0; y<h; y+=step){
+      for(let x=0; x<w; x+=step){
+        const i = (y*w + x) * 4;
+        if(maskData[i+3] > 100){
+          maskCount++;
+          if(drawData[i+3] > 10) hitCount++;
+        }
+      }
+    }
+    return maskCount ? hitCount / maskCount : 0;
+  }
+
+  function buildDots(){
+    dotsEl.innerHTML = '';
+    letters.forEach((l,i)=>{
+      const d = document.createElement('div');
+      d.className = 'dot' + (i===idx ? ' active' : '');
+      dotsEl.appendChild(d);
+    });
+  }
+
+  function markDone(i){
+    const dot = dotsEl.children[i];
+    if(dot) dot.classList.add('done');
+  }
+
+  function resizeCanvas(){
+    const rect = card.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+  }
+
+  function drawGuide(){
+    const letter = letters[idx].ch;
+    guideSvg.innerHTML = `
+      <text x="200" y="290" text-anchor="middle"
+        font-family="Segoe UI Rounded, Trebuchet MS, Verdana, sans-serif"
+        font-size="320" font-weight="900"
+        fill="none" stroke="#E7D6BE" stroke-width="4"
+        stroke-dasharray="14 12">${letter}</text>
+      <text x="200" y="290" text-anchor="middle"
+        font-family="Segoe UI Rounded, Trebuchet MS, Verdana, sans-serif"
+        font-size="320" font-weight="900"
+        fill="none" stroke="#F3E4C8" stroke-width="20"
+        opacity="0.35">${letter}</text>
+    `;
+  }
+
+  function loadLetter(){
+    const L = letters[idx];
+    drawGuide();
+    fruitEmoji.textContent = L.emoji;
+    fruitWord.textContent = L.word;
+    ctx.clearRect(0,0,canvas.width, canvas.height);
+    hasDrawn = false;
+    doneBtn.disabled = false;
+    buildDots();
+    prevBtn.style.visibility = idx===0 ? 'hidden' : 'visible';
+    nextBtn.textContent = idx === letters.length-1 ? 'Finish 🎉' : 'Next ➡';
+  }
+
+  function buildSwatches(){
+    swatchesEl.innerHTML = '';
+    colors.forEach((c,i)=>{
+      const b = document.createElement('div');
+      b.className = 'swatch' + (c===currentColor ? ' selected' : '');
+      b.style.background = c;
+      b.addEventListener('pointerdown', (e)=>{
+        e.preventDefault();
+        currentColor = c;
+        [...swatchesEl.children].forEach(s=>s.classList.remove('selected'));
+        b.classList.add('selected');
+      });
+      swatchesEl.appendChild(b);
+    });
+  }
+
+  function getPos(e){
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  canvas.addEventListener('pointerdown', (e)=>{
+    e.preventDefault();
+    drawing = true;
+    hasDrawn = true;
+    canvas.setPointerCapture(e.pointerId);
+    const p = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  });
+  canvas.addEventListener('pointermove', (e)=>{
+    if(!drawing) return;
+    e.preventDefault();
+    const p = getPos(e);
+    const pressure = e.pressure && e.pressure > 0 ? e.pressure : 0.5;
+    ctx.lineWidth = 10 + pressure * 14;
+    ctx.strokeStyle = currentColor;
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  });
+  function stopDraw(e){
+    if(!drawing) return;
+    drawing = false;
+    ctx.closePath();
+  }
+  canvas.addEventListener('pointerup', stopDraw);
+  canvas.addEventListener('pointercancel', stopDraw);
+  canvas.addEventListener('pointerleave', stopDraw);
+
+  clearBtn.addEventListener('click', ()=>{
+    ctx.clearRect(0,0,canvas.width, canvas.height);
+    hasDrawn = false;
+  });
+
+  function speak(text){
+    if('speechSynthesis' in window){
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.85; u.pitch = 1.15;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    }
+  }
+
+  hearBtn.addEventListener('click', ()=>{
+    const L = letters[idx];
+    speak(`${L.ch}. ${L.ch} says, like ${L.word}!`);
+  });
+
+  function celebrateNow(text, cb){
+    celebrateText.textContent = text;
+    celebrate.classList.add('show');
+    mascot.classList.add('cheer');
+    speak(text);
+    spawnConfetti();
+    setTimeout(()=>{
+      celebrate.classList.remove('show');
+      mascot.classList.remove('cheer');
+      if(cb) cb();
+    }, 1500);
+  }
+
+  function spawnConfetti(){
+    for(let i=0;i<26;i++){
+      const el = document.createElement('div');
+      el.className = 'confetti';
+      const c = colors[Math.floor(Math.random()*colors.length)];
+      el.style.background = c;
+      el.style.left = Math.random()*100+'vw';
+      el.style.width = el.style.height = (6+Math.random()*8)+'px';
+      el.style.opacity = '0.9';
+      document.body.appendChild(el);
+      const duration = 1200 + Math.random()*900;
+      el.animate([
+        { transform: 'translateY(0) rotate(0deg)', opacity: 1 },
+        { transform: `translateY(100vh) rotate(${360+Math.random()*360}deg)`, opacity: 0.3 }
+      ], { duration, easing:'ease-in' });
+      setTimeout(()=>el.remove(), duration);
+    }
+  }
+
+  const MIN_COVERAGE = 0.16; // lenient threshold, tuned for nursery-age tracing
+
+  doneBtn.addEventListener('click', ()=>{
+    if(!hasDrawn){
+      nudge("Trace over the dotted letter first!");
+      return;
+    }
+    const coverage = getTraceCoverage();
+    if(coverage < MIN_COVERAGE){
+      nudge("Let's trace a bit more of the letter!");
+      return;
+    }
+    markDone(idx);
+    celebrateNow('Great job!', ()=>{
+      if(idx < letters.length - 1){
+        idx++;
+        loadLetter();
+      } else {
+        celebrateNow("You traced them all! You're a star!");
+      }
+    });
+  });
+
+  nextBtn.addEventListener('click', ()=>{
+    if(!hasDrawn){
+      nudge("Trace over the dotted letter first!");
+      return;
+    }
+    const coverage = getTraceCoverage();
+    if(coverage < MIN_COVERAGE){
+      nudge("Let's trace a bit more of the letter!");
+      return;
+    }
+    markDone(idx);
+    if(idx < letters.length - 1){ idx++; loadLetter(); }
+    else { celebrateNow("You traced them all! You're a star!"); }
+  });
+  prevBtn.addEventListener('click', ()=>{
+    if(idx > 0){ idx--; loadLetter(); }
+  });
+
+  window.addEventListener('resize', ()=>{ resizeCanvas(); });
+
+  buildSwatches();
+  resizeCanvas();
+  loadLetter();
+})();
+</script>
+</body>
+</html>

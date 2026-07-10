@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Shape Sorter!</title>
+<style>
+  :root{
+    --cream:#EAF6FF;
+    --sun:#FFC33D;
+    --sky:#4FB4E8;
+    --grass:#66C97F;
+    --coral:#FF7A6E;
+    --grape:#B27FE0;
+    --ink:#2E3A45;
+    --card:#FFFFFF;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent; user-select:none;}
+  html,body{
+    margin:0; height:100%; overflow:hidden;
+    background: radial-gradient(circle at 85% 8%, #FFFFFF 0%, var(--cream) 55%, #D6ECFB 100%);
+    font-family: "Segoe UI Rounded","SF Pro Rounded","Trebuchet MS",Verdana,sans-serif;
+    color:var(--ink);
+    touch-action:none;
+  }
+  .screen{ position:relative; width:100%; height:100%; display:flex; flex-direction:column; padding: clamp(10px,2vh,26px) clamp(14px,3vw,44px);}
+
+  header{ display:flex; align-items:center; gap:14px; }
+  .score{ margin-left:auto; }
+  .title-wrap{display:flex; align-items:center; gap:14px;}
+  .title-wrap h1{ font-size: clamp(22px,3.4vw,34px); margin:0;}
+  .title-wrap .sub{font-size:clamp(13px,1.6vw,16px); color:#6c7f8c; margin-top:2px;}
+  .mascot{ width: clamp(56px,7vw,84px); animation: bob 3s ease-in-out infinite;}
+  @keyframes bob{ 0%,100%{transform:translateY(0) rotate(-2deg);} 50%{transform:translateY(-8px) rotate(2deg);} }
+  .mascot.cheer{ animation: cheer .6s ease-in-out 3; }
+  @keyframes cheer{ 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-18px) scale(1.15) rotate(10deg);} }
+
+  .score{
+    background:#fff; border-radius:20px; padding:10px 20px;
+    font-weight:800; font-size: clamp(15px,2vw,20px);
+    box-shadow: 0 4px 0 rgba(46,58,69,0.1);
+    display:flex; align-items:center; gap:8px;
+  }
+
+  main{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:space-between; gap: clamp(10px,2vh,20px); min-height:0; padding-top:6px;}
+
+  .targets{
+    display:flex; justify-content:center; gap: clamp(16px,3vw,50px);
+    width:100%; max-width:900px;
+  }
+  .target{
+    width: clamp(90px,13vw,150px); height: clamp(90px,13vw,150px);
+    border-radius:26px;
+    background: #fff;
+    border: 5px dashed #C9D8E0;
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+    transition: background .2s ease, border-color .2s ease, transform .15s ease;
+  }
+  .target .ghost{ width:62%; height:62%; opacity:.35; }
+  .target.hover{ border-color: var(--sun); transform: scale(1.05); background:#FFF6DF; }
+  .target.filled{ border-style:solid; border-color: var(--grass); background:#EAFBEE; }
+  .target .check{ position:absolute; top:-14px; right:-14px; font-size:30px; opacity:0; transform:scale(0);}
+  .target.filled .check{ opacity:1; transform:scale(1); transition: all .3s ease .1s; }
+
+  .tray{
+    width:100%; max-width:900px;
+    background:#fff; border-radius:28px;
+    box-shadow: 0 8px 0 rgba(46,58,69,0.08);
+    border: 4px solid #E4EFF5;
+    min-height: clamp(120px,20vh,190px);
+    display:flex; align-items:center; justify-content:center; gap: clamp(14px,3vw,36px);
+    position:relative;
+    flex-wrap:wrap;
+    padding: 14px;
+  }
+
+  .piece{
+    width: clamp(70px,10vw,110px); height: clamp(70px,10vw,110px);
+    cursor:grab; touch-action:none;
+    filter: drop-shadow(0 5px 0 rgba(0,0,0,0.12));
+    transition: transform .15s ease;
+  }
+  .piece.dragging{ position:fixed; z-index:60; cursor:grabbing; transition:none; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.25)); }
+  .piece.placed{ cursor:default; filter: drop-shadow(0 3px 0 rgba(0,0,0,0.12)); }
+  .piece.wrong{ animation: shake .4s ease; }
+  @keyframes shake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-10px);} 75%{transform:translateX(10px);} }
+
+  footer{ display:flex; justify-content:center; padding-top: clamp(8px,1.6vh,16px);}
+  .btn{
+    font-family:inherit; font-weight:800; font-size: clamp(16px,2vw,20px);
+    border:none; border-radius:20px; padding: 14px 30px;
+    cursor:pointer; color:#fff; background: var(--coral);
+    box-shadow: 0 6px 0 rgba(0,0,0,0.15);
+  }
+  .btn:active{ transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+
+  .celebrate{
+    position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+    background: rgba(234,246,255,0.9); z-index:70; flex-direction:column; gap:18px; text-align:center;
+  }
+  .celebrate.show{display:flex;}
+  .celebrate h2{ font-size: clamp(30px,6vw,56px); margin:0; color:var(--sky);}
+  .star-row{ font-size: clamp(40px,7vw,70px); }
+  .star-row span{ display:inline-block; animation: pop .5s ease backwards;}
+  .star-row span:nth-child(2){animation-delay:.2s;}
+  .star-row span:nth-child(3){animation-delay:.35s;}
+  @keyframes pop{ 0%{transform:scale(0) rotate(-40deg); opacity:0;} 70%{transform:scale(1.3) rotate(8deg);} 100%{transform:scale(1) rotate(0); opacity:1;} }
+  .confetti{ position:fixed; top:-20px; border-radius:3px; z-index:65; }
+
+  .home-btn{
+    width:46px; height:46px; border-radius:50%;
+    background:#fff; border:3px solid #D6ECFB;
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; text-decoration:none; flex-shrink:0;
+    box-shadow: 0 4px 0 rgba(46,58,69,0.12);
+  }
+  .home-btn:active{ transform: translateY(3px); box-shadow:none; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <header>
+    <a class="home-btn" href="index.html" title="Back to lessons">🏠</a>
+    <div class="title-wrap">
+      <svg class="mascot" id="mascot" viewBox="0 0 100 100"><ellipse cx="50" cy="60" rx="34" ry="26" fill="#fff" stroke="#C9D8E0" stroke-width="3"/><circle cx="30" cy="48" r="18" fill="#fff" stroke="#C9D8E0" stroke-width="3"/><circle cx="70" cy="48" r="18" fill="#fff" stroke="#C9D8E0" stroke-width="3"/><circle cx="50" cy="38" r="22" fill="#fff" stroke="#C9D8E0" stroke-width="3"/><circle cx="41" cy="38" r="4.2" fill="#2E3A45"/><circle cx="60" cy="38" r="4.2" fill="#2E3A45"/><path d="M42 48 Q50 55 58 48" stroke="#2E3A45" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+      <div>
+        <h1>Shape Sorter!</h1>
+        <div class="sub">Drag each shape into its matching home</div>
+      </div>
+    </div>
+    <div class="score" id="score">⭐ 0 / 3</div>
+  </header>
+
+  <main>
+    <div class="targets" id="targets"></div>
+    <div class="tray" id="tray"></div>
+  </main>
+
+  <footer>
+    <button class="btn" id="resetBtn">🔄 Play Again</button>
+  </footer>
+</div>
+
+<div class="celebrate" id="celebrate">
+  <svg class="mascot cheer" viewBox="0 0 100 100" width="120"><ellipse cx="50" cy="60" rx="34" ry="26" fill="#fff" stroke="#C9D8E0" stroke-width="3"/><circle cx="30" cy="48" r="18" fill="#fff" stroke="#C9D8E0" stroke-width="3"/><circle cx="70" cy="48" r="18" fill="#fff" stroke="#C9D8E0" stroke-width="3"/><circle cx="50" cy="38" r="22" fill="#fff" stroke="#C9D8E0" stroke-width="3"/><circle cx="41" cy="38" r="4.2" fill="#2E3A45"/><circle cx="60" cy="38" r="4.2" fill="#2E3A45"/><path d="M40 46 Q50 60 60 46" stroke="#2E3A45" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+  <h2 id="celebrateText">All Shapes Sorted!</h2>
+  <div class="star-row"><span>⭐</span><span>🌟</span><span>⭐</span></div>
+</div>
+
+<script>
+(function(){
+  const shapeDefs = {
+    circle: { color:'#FF7A6E', svg: (fill,op)=>`<svg viewBox="0 0 100 100" width="100%" height="100%" style="opacity:${op}"><circle cx="50" cy="50" r="42" fill="${fill}"/></svg>` , name:'circle'},
+    square: { color:'#4FB4E8', svg: (fill,op)=>`<svg viewBox="0 0 100 100" width="100%" height="100%" style="opacity:${op}"><rect x="10" y="10" width="80" height="80" rx="14" fill="${fill}"/></svg>`, name:'square'},
+    triangle: { color:'#FFC33D', svg: (fill,op)=>`<svg viewBox="0 0 100 100" width="100%" height="100%" style="opacity:${op}"><polygon points="50,8 92,88 8,88" fill="${fill}"/></svg>`, name:'triangle'},
+    star: { color:'#B27FE0', svg: (fill,op)=>`<svg viewBox="0 0 100 100" width="100%" height="100%" style="opacity:${op}"><polygon points="50,4 61,37 96,37 68,58 79,92 50,71 21,92 32,58 4,37 39,37" fill="${fill}"/></svg>`, name:'star'}
+  };
+
+  // choose 4 shapes for this round (all 4)
+  const shapeKeys = ['circle','square','triangle','star'];
+  let placedCount = 0;
+  const targetsEl = document.getElementById('targets');
+  const trayEl = document.getElementById('tray');
+  const scoreEl = document.getElementById('score');
+  const mascot = document.getElementById('mascot');
+  const celebrate = document.getElementById('celebrate');
+  const celebrateText = document.getElementById('celebrateText');
+  const colors = ['#FF7A6E','#4FB4E8','#66C97F','#FFC33D','#B27FE0'];
+
+  function speak(text){
+    if('speechSynthesis' in window){
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.9; u.pitch = 1.15;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    }
+  }
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+
+  function buildBoard(){
+    targetsEl.innerHTML = '';
+    trayEl.innerHTML = '';
+    placedCount = 0;
+    scoreEl.textContent = `⭐ 0 / ${shapeKeys.length}`;
+
+    shapeKeys.forEach(key=>{
+      const def = shapeDefs[key];
+      const t = document.createElement('div');
+      t.className = 'target';
+      t.dataset.shape = key;
+      t.innerHTML = `<div class="ghost">${def.svg('#B9C7D0',1)}</div><div class="check">✅</div>`;
+      targetsEl.appendChild(t);
+    });
+
+    const trayOrder = shuffle(shapeKeys);
+    trayOrder.forEach(key=>{
+      const def = shapeDefs[key];
+      const p = document.createElement('div');
+      p.className = 'piece';
+      p.dataset.shape = key;
+      p.innerHTML = def.svg(def.color, 1);
+      trayEl.appendChild(p);
+      makeDraggable(p);
+    });
+  }
+
+  function makeDraggable(piece){
+    let startX, startY, origParent, placeholder;
+    piece.addEventListener('pointerdown', (e)=>{
+      e.preventDefault();
+      const rect = piece.getBoundingClientRect();
+      startX = e.clientX - rect.left;
+      startY = e.clientY - rect.top;
+      origParent = piece.parentElement;
+
+      placeholder = document.createElement('div');
+      placeholder.style.width = rect.width+'px';
+      placeholder.style.height = rect.height+'px';
+      placeholder.style.visibility='hidden';
+      origParent.insertBefore(placeholder, piece);
+
+      document.body.appendChild(piece);
+      piece.style.position = 'fixed';
+      piece.style.width = rect.width+'px';
+      piece.style.height = rect.height+'px';
+      piece.classList.add('dragging');
+      movePiece(e.clientX, e.clientY);
+      piece.setPointerCapture(e.pointerId);
+    });
+
+    function movePiece(x,y){
+      piece.style.left = (x-startX)+'px';
+      piece.style.top = (y-startY)+'px';
+    }
+
+    piece.addEventListener('pointermove', (e)=>{
+      if(!piece.classList.contains('dragging')) return;
+      e.preventDefault();
+      movePiece(e.clientX, e.clientY);
+
+      const rect = piece.getBoundingClientRect();
+      const cx = rect.left + rect.width/2;
+      const cy = rect.top + rect.height/2;
+      let hovered = null;
+      [...targetsEl.children].forEach(t=>{
+        const tr = t.getBoundingClientRect();
+        if(cx > tr.left && cx < tr.right && cy > tr.top && cy < tr.bottom){
+          hovered = t;
+        }
+        t.classList.remove('hover');
+      });
+      if(hovered && !hovered.classList.contains('filled')) hovered.classList.add('hover');
+    });
+
+    function endDrag(e){
+      if(!piece.classList.contains('dragging')) return;
+
+      // Determine the drop target FIRST, while the piece is still
+      // fixed-positioned at its dragged location. Changing classes/styles
+      // before this point would move the piece and break the hit-test.
+      const rect = piece.getBoundingClientRect();
+      const cx = rect.left + rect.width/2;
+      const cy = rect.top + rect.height/2;
+      let target = null;
+      [...targetsEl.children].forEach(t=>{
+        t.classList.remove('hover');
+        const tr = t.getBoundingClientRect();
+        if(cx > tr.left && cx < tr.right && cy > tr.top && cy < tr.bottom){
+          target = t;
+        }
+      });
+
+      piece.classList.remove('dragging');
+
+      if(target && target.dataset.shape === piece.dataset.shape && !target.classList.contains('filled')){
+        // correct!
+        const tr = target.getBoundingClientRect();
+        piece.style.position = 'fixed';
+        piece.style.left = (tr.left + tr.width*0.19) + 'px';
+        piece.style.top = (tr.top + tr.height*0.19) + 'px';
+        piece.style.width = (tr.width*0.62)+'px';
+        piece.style.height = (tr.height*0.62)+'px';
+        piece.classList.add('placed');
+        target.classList.add('filled');
+        placeholder.remove();
+        placedCount++;
+        scoreEl.textContent = `⭐ ${placedCount} / ${shapeKeys.length}`;
+        speak(`${piece.dataset.shape}! Great job!`);
+        if(placedCount === shapeKeys.length){
+          setTimeout(()=>celebrateNow("All Shapes Sorted!"), 400);
+        }
+      } else {
+        // return to tray
+        piece.classList.add('wrong');
+        piece.style.position='';
+        piece.style.left=''; piece.style.top='';
+        piece.style.width=''; piece.style.height='';
+        origParent.insertBefore(piece, placeholder);
+        placeholder.remove();
+        setTimeout(()=>piece.classList.remove('wrong'), 400);
+      }
+    }
+    piece.addEventListener('pointerup', endDrag);
+    piece.addEventListener('pointercancel', endDrag);
+  }
+
+  function spawnConfetti(){
+    for(let i=0;i<28;i++){
+      const el = document.createElement('div');
+      el.className = 'confetti';
+      const c = colors[Math.floor(Math.random()*colors.length)];
+      el.style.background = c;
+      el.style.left = Math.random()*100+'vw';
+      el.style.width = el.style.height = (6+Math.random()*8)+'px';
+      document.body.appendChild(el);
+      const duration = 1200 + Math.random()*900;
+      el.animate([
+        { transform: 'translateY(0) rotate(0deg)', opacity:1 },
+        { transform: `translateY(100vh) rotate(${360+Math.random()*360}deg)`, opacity:0.3 }
+      ], { duration, easing:'ease-in' });
+      setTimeout(()=>el.remove(), duration);
+    }
+  }
+
+  function celebrateNow(text){
+    celebrateText.textContent = text;
+    celebrate.classList.add('show');
+    mascot.classList.add('cheer');
+    speak(text);
+    spawnConfetti();
+    setTimeout(()=>{
+      celebrate.classList.remove('show');
+      mascot.classList.remove('cheer');
+    }, 1800);
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', buildBoard);
+
+  buildBoard();
+})();
+</script>
+</body>
+</html>

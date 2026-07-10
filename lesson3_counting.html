@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Let's Count!</title>
+<style>
+  :root{
+    --cream:#F3FFF0;
+    --sun:#FFC33D;
+    --sky:#4FB4E8;
+    --grass:#5EC46A;
+    --coral:#FF7A6E;
+    --grape:#B27FE0;
+    --ink:#33402F;
+    --card:#FFFFFF;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent; user-select:none;}
+  html,body{
+    margin:0; height:100%; overflow:hidden;
+    background: radial-gradient(circle at 10% 90%, #FFFFFF 0%, var(--cream) 55%, #DFF6D8 100%);
+    font-family: "Segoe UI Rounded","SF Pro Rounded","Trebuchet MS",Verdana,sans-serif;
+    color:var(--ink);
+    touch-action:none;
+  }
+  .screen{ position:relative; width:100%; height:100%; display:flex; flex-direction:column; padding: clamp(10px,2vh,26px) clamp(14px,3vw,44px);}
+
+  header{ display:flex; align-items:center; gap:14px; }
+  .round-badge{ margin-left:auto; }
+  .title-wrap{display:flex; align-items:center; gap:14px;}
+  .title-wrap h1{ font-size: clamp(22px,3.4vw,34px); margin:0;}
+  .title-wrap .sub{font-size:clamp(13px,1.6vw,16px); color:#71806b; margin-top:2px;}
+  .mascot{ width: clamp(56px,7vw,84px); animation: bob 3s ease-in-out infinite;}
+  @keyframes bob{ 0%,100%{transform:translateY(0) rotate(-2deg);} 50%{transform:translateY(-8px) rotate(2deg);} }
+  .mascot.cheer{ animation: cheer .6s ease-in-out 3; }
+  @keyframes cheer{ 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-18px) scale(1.15) rotate(10deg);} }
+
+  .round-badge{
+    background:#fff; border-radius:20px; padding:10px 20px;
+    font-weight:800; font-size: clamp(15px,2vw,20px);
+    box-shadow: 0 4px 0 rgba(51,64,47,0.1);
+  }
+
+  main{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap: clamp(14px,2.4vh,28px); min-height:0;}
+
+  .prompt{ font-size: clamp(18px,2.6vw,26px); font-weight:700; text-align:center; }
+
+  .field{
+    width:100%; max-width:820px; min-height: clamp(150px,26vh,240px);
+    background:#fff; border-radius:32px;
+    border: 5px solid #E1F0DA;
+    box-shadow: 0 8px 0 rgba(51,64,47,0.08);
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:center;
+    gap: clamp(10px,2.4vw,22px);
+    padding: clamp(16px,3vh,30px);
+  }
+
+  .item{
+    font-size: clamp(46px,8vw,86px);
+    cursor:pointer;
+    transition: transform .15s ease, filter .2s ease;
+    filter: drop-shadow(0 4px 0 rgba(0,0,0,0.1));
+  }
+  .item.counted{
+    transform: scale(1.18) rotate(-6deg);
+    filter: drop-shadow(0 4px 0 rgba(0,0,0,0.1)) drop-shadow(0 0 10px rgba(255,195,61,0.9));
+  }
+  .item.counted::after{ content:''; }
+
+  .counter{
+    font-size: clamp(30px,4.6vw,46px); font-weight:900; color:var(--coral);
+    min-height: 1.2em;
+  }
+
+  .numbers{
+    display:flex; gap: clamp(10px,2.4vw,22px);
+  }
+  .num-btn{
+    width: clamp(62px,9vw,92px); height: clamp(62px,9vw,92px);
+    border-radius:22px; border:none;
+    font-size: clamp(24px,4vw,36px); font-weight:900;
+    background:#fff; color:var(--ink);
+    box-shadow: 0 6px 0 rgba(51,64,47,0.14);
+    cursor:pointer;
+  }
+  .num-btn:active{ transform: translateY(4px); box-shadow: 0 2px 0 rgba(51,64,47,0.14); }
+  .num-btn.correct{ background: var(--grass); color:#fff; }
+  .num-btn.wrong{ animation: shake .4s ease; background:#FFE0DB; }
+  @keyframes shake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-8px);} 75%{transform:translateX(8px);} }
+
+  footer{ display:flex; justify-content:center; padding-top: clamp(8px,1.6vh,16px);}
+  .btn{
+    font-family:inherit; font-weight:800; font-size: clamp(16px,2vw,20px);
+    border:none; border-radius:20px; padding: 12px 26px;
+    cursor:pointer; color:#fff; background: var(--grape);
+    box-shadow: 0 6px 0 rgba(0,0,0,0.15);
+  }
+  .btn:active{ transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+
+  .celebrate{
+    position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+    background: rgba(243,255,240,0.92); z-index:70; flex-direction:column; gap:18px; text-align:center;
+  }
+  .celebrate.show{display:flex;}
+  .celebrate h2{ font-size: clamp(28px,5.6vw,52px); margin:0; color:var(--grass);}
+  .star-row{ font-size: clamp(40px,7vw,70px); }
+  .star-row span{ display:inline-block; animation: pop .5s ease backwards;}
+  .star-row span:nth-child(2){animation-delay:.2s;}
+  .star-row span:nth-child(3){animation-delay:.35s;}
+  @keyframes pop{ 0%{transform:scale(0) rotate(-40deg); opacity:0;} 70%{transform:scale(1.3) rotate(8deg);} 100%{transform:scale(1) rotate(0); opacity:1;} }
+  .confetti{ position:fixed; top:-20px; border-radius:3px; z-index:65; }
+
+  .home-btn{
+    width:46px; height:46px; border-radius:50%;
+    background:#fff; border:3px solid #E1F0DA;
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; text-decoration:none; flex-shrink:0;
+    box-shadow: 0 4px 0 rgba(51,64,47,0.12);
+  }
+  .home-btn:active{ transform: translateY(3px); box-shadow:none; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <header>
+    <a class="home-btn" href="index.html" title="Back to lessons">🏠</a>
+    <div class="title-wrap">
+      <svg class="mascot" id="mascot" viewBox="0 0 100 100"><ellipse cx="50" cy="60" rx="34" ry="26" fill="#fff" stroke="#E1F0DA" stroke-width="3"/><circle cx="30" cy="48" r="18" fill="#fff" stroke="#E1F0DA" stroke-width="3"/><circle cx="70" cy="48" r="18" fill="#fff" stroke="#E1F0DA" stroke-width="3"/><circle cx="50" cy="38" r="22" fill="#fff" stroke="#E1F0DA" stroke-width="3"/><circle cx="41" cy="38" r="4.2" fill="#33402F"/><circle cx="60" cy="38" r="4.2" fill="#33402F"/><path d="M42 48 Q50 55 58 48" stroke="#33402F" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+      <div>
+        <h1>Let's Count!</h1>
+        <div class="sub">Tap each picture, then tap the matching number</div>
+      </div>
+    </div>
+    <div class="round-badge" id="roundBadge">Round 1 / 5</div>
+  </header>
+
+  <main>
+    <div class="prompt">Tap every picture to count them!</div>
+    <div class="field" id="field"></div>
+    <div class="counter" id="counter">0</div>
+    <div class="numbers" id="numbers"></div>
+  </main>
+
+  <footer>
+    <button class="btn" id="restartBtn">🔄 Start Over</button>
+  </footer>
+</div>
+
+<div class="celebrate" id="celebrate">
+  <svg class="mascot cheer" viewBox="0 0 100 100" width="120"><ellipse cx="50" cy="60" rx="34" ry="26" fill="#fff" stroke="#E1F0DA" stroke-width="3"/><circle cx="30" cy="48" r="18" fill="#fff" stroke="#E1F0DA" stroke-width="3"/><circle cx="70" cy="48" r="18" fill="#fff" stroke="#E1F0DA" stroke-width="3"/><circle cx="50" cy="38" r="22" fill="#fff" stroke="#E1F0DA" stroke-width="3"/><circle cx="41" cy="38" r="4.2" fill="#33402F"/><circle cx="60" cy="38" r="4.2" fill="#33402F"/><path d="M40 46 Q50 60 60 46" stroke="#33402F" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+  <h2 id="celebrateText">Well Done!</h2>
+  <div class="star-row"><span>⭐</span><span>🌟</span><span>⭐</span></div>
+</div>
+
+<script>
+(function(){
+  const emojiSets = ['🍓','🐥','🎈','🐢','🍩','🦋','⭐','🐬','🍉','🚗'];
+  const rounds = [1,2,3,4,5];
+  let roundIdx = 0;
+  let countedSet = new Set();
+  let itemsThisRound = 0;
+
+  const fieldEl = document.getElementById('field');
+  const counterEl = document.getElementById('counter');
+  const numbersEl = document.getElementById('numbers');
+  const roundBadge = document.getElementById('roundBadge');
+  const mascot = document.getElementById('mascot');
+  const celebrate = document.getElementById('celebrate');
+  const celebrateText = document.getElementById('celebrateText');
+  const colors = ['#FF7A6E','#4FB4E8','#5EC46A','#FFC33D','#B27FE0'];
+
+  function speak(text){
+    if('speechSynthesis' in window){
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.9; u.pitch = 1.15;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    }
+  }
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+
+  function buildRound(){
+    const n = rounds[roundIdx];
+    itemsThisRound = n;
+    countedSet = new Set();
+    roundBadge.textContent = `Round ${roundIdx+1} / ${rounds.length}`;
+    counterEl.textContent = '0';
+
+    const emoji = emojiSets[Math.floor(Math.random()*emojiSets.length)];
+    fieldEl.innerHTML = '';
+    for(let i=0;i<n;i++){
+      const item = document.createElement('div');
+      item.className = 'item';
+      item.textContent = emoji;
+      item.dataset.id = i;
+      item.addEventListener('pointerdown', (e)=>{
+        e.preventDefault();
+        if(item.classList.contains('counted')) return;
+        item.classList.add('counted');
+        countedSet.add(i);
+        counterEl.textContent = countedSet.size;
+        speak(String(countedSet.size));
+      });
+      fieldEl.appendChild(item);
+    }
+
+    // build number buttons: correct answer + distractors, shuffled
+    const choicePool = new Set([n]);
+    while(choicePool.size < Math.min(4, 5)){
+      const r = 1 + Math.floor(Math.random()*5);
+      choicePool.add(r);
+    }
+    const choices = shuffle([...choicePool]);
+    numbersEl.innerHTML = '';
+    choices.forEach(num=>{
+      const b = document.createElement('button');
+      b.className = 'num-btn';
+      b.textContent = num;
+      b.addEventListener('click', ()=>{
+        if(countedSet.size !== itemsThisRound){
+          speak("Count all the pictures first!");
+          return;
+        }
+        if(num === itemsThisRound){
+          b.classList.add('correct');
+          setTimeout(()=>{
+            if(roundIdx < rounds.length - 1){
+              celebrateNow('Great counting!', ()=>{
+                roundIdx++;
+                buildRound();
+              });
+            } else {
+              celebrateNow("You counted them all! Amazing!");
+            }
+          }, 400);
+        } else {
+          b.classList.add('wrong');
+          speak("Try again!");
+          setTimeout(()=>b.classList.remove('wrong'), 400);
+        }
+      });
+      numbersEl.appendChild(b);
+    });
+  }
+
+  function spawnConfetti(){
+    for(let i=0;i<28;i++){
+      const el = document.createElement('div');
+      el.className = 'confetti';
+      const c = colors[Math.floor(Math.random()*colors.length)];
+      el.style.background = c;
+      el.style.left = Math.random()*100+'vw';
+      el.style.width = el.style.height = (6+Math.random()*8)+'px';
+      document.body.appendChild(el);
+      const duration = 1200 + Math.random()*900;
+      el.animate([
+        { transform: 'translateY(0) rotate(0deg)', opacity:1 },
+        { transform: `translateY(100vh) rotate(${360+Math.random()*360}deg)`, opacity:0.3 }
+      ], { duration, easing:'ease-in' });
+      setTimeout(()=>el.remove(), duration);
+    }
+  }
+
+  function celebrateNow(text, cb){
+    celebrateText.textContent = text;
+    celebrate.classList.add('show');
+    mascot.classList.add('cheer');
+    speak(text);
+    spawnConfetti();
+    setTimeout(()=>{
+      celebrate.classList.remove('show');
+      mascot.classList.remove('cheer');
+      if(cb) cb();
+    }, 1500);
+  }
+
+  document.getElementById('restartBtn').addEventListener('click', ()=>{
+    roundIdx = 0;
+    buildRound();
+  });
+
+  buildRound();
+})();
+</script>
+</body>
+</html>
